@@ -20,6 +20,7 @@
 
     <modules>
         <module>kafka</module>
+        <module>2kafka</module>
     </modules>
 
     <properties>

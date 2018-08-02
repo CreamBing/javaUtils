@@ -20,13 +20,15 @@ import java.util.Map;
 public class KafkaCommonConfiguration {
 
     @Autowired
-    private KafkaConfigProperties kafkaConfigProperties;
+    private KafkaConsumerProperties consumerProperties;
+	@Autowired
+	private KafkaProduceProperties produceProperties;
 
     @Bean
     public ProducerFactory<String, String> producerFactory() {
 	Map<String, Object> props = new HashMap<>();
 
-	props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, this.kafkaConfigProperties.getBootstrapServers());
+	props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, produceProperties.getBootstrapServers());
 	props.put(ProducerConfig.RETRIES_CONFIG, 0);
 	props.put(ProducerConfig.BATCH_SIZE_CONFIG, 100);
 	props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
@@ -49,8 +51,8 @@ public class KafkaCommonConfiguration {
     @Bean
     public Map<String, Object> consumerProperties() {
 	Map<String, Object> props = new HashMap<>();
-	props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, this.kafkaConfigProperties.getBootstrapServers());
-	props.put(ConsumerConfig.GROUP_ID_CONFIG, this.kafkaConfigProperties.getGroupId());
+	props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, consumerProperties.getBootstrapServers());
+	props.put(ConsumerConfig.GROUP_ID_CONFIG, consumerProperties.getGroupId());
 	props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
 	props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, 1000);
 	props.put(ConsumerConfig.SESSION_TIMEOUT_MS_CONFIG, 15000);

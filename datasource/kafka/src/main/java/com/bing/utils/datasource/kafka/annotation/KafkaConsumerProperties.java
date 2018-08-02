@@ -11,15 +11,15 @@ import javax.annotation.PostConstruct;
 @ConfigurationProperties(prefix = "spring.kafka.consumer")
 @Configuration
 @Data
-public class KafkaConfigProperties {
-    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConfigProperties.class);
+public class KafkaConsumerProperties {
+    private static final Logger LOGGER = LoggerFactory.getLogger(KafkaConsumerProperties.class);
 
     private String bootstrapServers;
     private String groupId;
 
     @PostConstruct
     private void printConf(){
-        LOGGER.info("\nkafka 配置加载完成:" +
+        LOGGER.info("\nkafka 消费配置加载完成:" +
                 "\n\tbootstrap-servers[{}]" +
                 "\n\tgroup-id[{}]",bootstrapServers,groupId);
     }
