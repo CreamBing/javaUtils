@@ -11,7 +11,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.kafka.annotation.EnableKafka;
 import org.springframework.kafka.config.ConcurrentKafkaListenerContainerFactory;
+import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.*;
+import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.support.converter.StringJsonMessageConverter;
 
 import java.util.HashMap;
@@ -26,23 +28,10 @@ public class KafkaCommonConfiguration {
 	@Autowired
 	private Kafka2Conf kafka2Conf;
 
-	@Bean
-    public ProducerFactory<String, String> producerFactory1() {
-	Map<String, Object> props = new HashMap<>();
-	props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1Conf.getProduceBootstrapServers());
-	props.put(ProducerConfig.RETRIES_CONFIG, 0);
-	props.put(ProducerConfig.BATCH_SIZE_CONFIG, 100);
-	props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
-	props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 104857600);
-	props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-	props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
-	return new DefaultKafkaProducerFactory<>(props);
-    }
-
     @Bean
-    public ProducerFactory<String, String> producerFactory2() {
+    public ProducerFactory<String, String> producerFactory() {
         Map<String, Object> props = new HashMap<>();
-        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka2Conf.getProduceBootstrapServers());
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1Conf.getProduceBootstrapServers());
         props.put(ProducerConfig.RETRIES_CONFIG, 0);
         props.put(ProducerConfig.BATCH_SIZE_CONFIG, 100);
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
@@ -55,19 +44,28 @@ public class KafkaCommonConfiguration {
     @Primary
     @Bean(name = "kafkaTemplate1")
     @Qualifier("kafkaTemplate1")
-    public KafkaTemplate<String, String> kafkaTemplate1() {
-	return new KafkaTemplate<>(producerFactory1());
+    public KafkaTemplate<String, String> kafkaTemplate() {
+        return new KafkaTemplate<>(producerFactory());
     }
-
-    @Bean(name = "kafkaTemplate2")
-    @Qualifier("kafkaTemplate2")
-    public KafkaTemplate<String, String> kafkaTemplate2() {
-        return new KafkaTemplate<>(producerFactory2());
-    }
-
 
     @Bean
-    public Map<String, Object> consumerProperties1() {
+    public ConsumerFactory<String, String> consumerFactory() {
+        return new DefaultKafkaConsumerFactory<>(consumerProperties());
+    }
+
+    /**
+     * 尽管可能不用，但是一定要有，否则KafkaAutoConfiguration springboot自动配置失败
+     * @return
+     */
+    @Bean
+    public ConcurrentKafkaListenerContainerFactory<String, String> kafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        return factory;
+    }
+
+    @Bean
+    public Map<String, Object> consumerProperties() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka1Conf.getConsumerBootstrapServers());
         props.put(ConsumerConfig.GROUP_ID_CONFIG, kafka1Conf.getGroupId());
@@ -80,7 +78,38 @@ public class KafkaCommonConfiguration {
         return props;
     }
 
-    @Bean
+    @Primary
+    @Bean(name = "jsonKafkaListenerContainerFactory1")
+    @Qualifier("jsonKafkaListenerContainerFactory1")
+    public ConcurrentKafkaListenerContainerFactory<String, String> jsonKafkaListenerContainerFactory() {
+        ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
+        factory.setConsumerFactory(consumerFactory());
+        factory.setBatchListener(true);
+        factory.setMessageConverter(new StringJsonMessageConverter());
+        return factory;
+    }
+
+
+    public ProducerFactory<String, String> producerFactory2() {
+        Map<String, Object> props = new HashMap<>();
+        props.put(ProducerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka2Conf.getProduceBootstrapServers());
+        props.put(ProducerConfig.RETRIES_CONFIG, 0);
+        props.put(ProducerConfig.BATCH_SIZE_CONFIG, 100);
+        props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
+        props.put(ProducerConfig.BUFFER_MEMORY_CONFIG, 104857600);
+        props.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        props.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
+        return new DefaultKafkaProducerFactory<>(props);
+    }
+
+
+    @Bean(name = "kafkaTemplate2")
+    @Qualifier("kafkaTemplate2")
+    public KafkaTemplate<String, String> kafkaTemplate2() {
+        return new KafkaTemplate<>(producerFactory2());
+    }
+
+
     public Map<String, Object> consumerProperties2() {
         Map<String, Object> props = new HashMap<>();
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, kafka2Conf.getConsumerBootstrapServers());
@@ -94,29 +123,14 @@ public class KafkaCommonConfiguration {
         return props;
     }
 
-    @Bean
-    public ConsumerFactory<String, String> consumerFactory1() {
-	return new DefaultKafkaConsumerFactory<>(consumerProperties1());
-    }
-
-    @Bean
     public ConsumerFactory<String, String> consumerFactory2() {
         return new DefaultKafkaConsumerFactory<>(consumerProperties2());
     }
 
-    @Bean(name = "jsonKafkaListenerContainerFactory1")
-    @Qualifier("jsonKafkaListenerContainerFactory1")
-    public ConcurrentKafkaListenerContainerFactory<String, String> jsonKafkaListenerContainerFactory1() {
-	ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
-	factory.setConsumerFactory(consumerFactory1());
-	factory.setBatchListener(true);
-	factory.setMessageConverter(new StringJsonMessageConverter());
-	return factory;
-    }
 
     @Bean(name = "jsonKafkaListenerContainerFactory2")
     @Qualifier("jsonKafkaListenerContainerFactory2")
-    public ConcurrentKafkaListenerContainerFactory<String, String> jsonKafkaListenerContainerFactory2() {
+    public KafkaListenerContainerFactory<ConcurrentMessageListenerContainer<String, String>> jsonKafkaListenerContainerFactory2() {
         ConcurrentKafkaListenerContainerFactory<String, String> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(consumerFactory2());
         factory.setBatchListener(true);
